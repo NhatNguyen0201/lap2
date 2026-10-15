@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Giám Sát Bể Thủy Hải Sản</title>
+    <!-- Thư viện MQTT.js qua CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax5/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; margin: 15px auto; width: 300px; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; color: white; margin: 5px; }
+        .btn-on { background-color: #4CAF50; }
+        .btn-off { background-color: #f44336; }
+    </style>
+</head>
+<body>
+
+    <h1>Hệ Thống Giám Sát Bể Thủy Hải Sản</h1>
+
+    <div class="card">
+        <h3>Mực Nước</h3>
+        <p><span id="water_level">--</span> cm</p>
+    </div>
+
+    <div class="card">
+        <h3>Nhiệt Độ Bể</h3>
+        <p><span id="temp">--</span> °C</p>
+    </div>
+
+    <div class="card">
+        <h3>Điều Khiển Thủ Công (Manual)</h3>
+        <p>Bơm Vào:</p>
+        <button class="btn-on" onclick="sendCmd('esp32/lab2/de4/pump_cmd', 'ON')">Bật Bơm</button>
+        <button class="btn-off" onclick="sendCmd('esp32/lab2/de4/pump_cmd', 'OFF')">Tắt Bơm</button>
+        
+        <p>Van Xả:</p>
+        <button class="btn-on" onclick="sendCmd('esp32/lab2/de4/valve_cmd', 'ON')">Mở Van</button>
+        <button class="btn-off" onclick="sendCmd('esp32/lab2/de4/valve_cmd', 'OFF')">Đóng Van</button>
+    </div>
+
+    <script>
+        // Kết nối MQTT Broker qua cổng WebSocket (HiveMQ công cộng)
+        // Lưu ý: Dùng wss:// cho bảo mật hoặc ws:// cho cổng thường (Cổng WebSocket của HiveMQ thường là 8000 hoặc 8884)
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+        client.on('connect', function () {
+            console.log('Đã kết nối MQTT Broker thành công!');
+            // Đăng ký nhận dữ liệu cảm biến
+            client.subscribe('esp32/lab2/de4/water_level');
+            client.subscribe('esp32/lab2/de4/temperature');
+        });
+
+        client.on('message', function (topic, payload) {
+            let message = payload.toString();
+            if (topic === 'esp32/lab2/de4/water_level') {
+                document.getElementById('water_level').innerText = message;
+            }
+            if (topic === 'esp32/lab2/de4/temperature') {
+                document.getElementById('temp').innerText = message;
+            }
+        });
+
+        // Hàm gửi lệnh điều khiển khi bấm nút trên web
+        function sendCmd(topic, value) {
+            client.publish(topic, value, function () {
+                console.log(`Đã gửi lệnh [${value}] tới topic [${topic}]`);
+            });
+        }
+    </script>
+</body>
+</html>
